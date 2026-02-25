@@ -16,8 +16,10 @@ public class WeixinHandler implements BaseHandler {
     private WorkPageProcessor workPageProcessor = new WorkPageProcessor();
     private MessagePageProcessor messagePageProcessor = new MessagePageProcessor();
     private SiginInProcessor siginInProcessor = new SiginInProcessor();
-
     private CompleteProcessor completeProcessor = new CompleteProcessor();
+
+    // 添加延迟控制变量
+    private long startTime = 0;
 
     @Override
     public void doHandle(AccessibilityEvent event, MyAccessibilityService myAccessibilityService)
@@ -25,27 +27,34 @@ public class WeixinHandler implements BaseHandler {
         if (!AutoSignPermissionUtils.INSTANCE.isMobileAutoSignLaunch()) {
             return;
         }
-        AccessibilityNodeInfo nodeById =
-                AccessibilityHelper.getNodeById(myAccessibilityService, "com.tencent.wework:id/hrb",
-                        0);
+
+        // 添加10秒延迟逻辑（仅需这3行代码）
+        if (startTime == 0) {
+            startTime = System.currentTimeMillis();
+            return;
+        }
+        if (System.currentTimeMillis() - startTime < 10000) {
+            return;
+        }
+
+        AccessibilityNodeInfo nodeById = AccessibilityHelper.getNodeById(myAccessibilityService,
+                "com.tencent.wework:id/hrb",
+                0);
         if (nodeById != null) {
             AccessibilityHelper.clickButtonByNode(myAccessibilityService, nodeById);
         } else if (this.messagePageProcessor.canParse(event, myAccessibilityService)) {
-            // 首页
             this.messagePageProcessor.processPage(event, myAccessibilityService);
         } else if (this.workPageProcessor.canParse(event, myAccessibilityService)) {
-            // 控制台
             this.workPageProcessor.processPage(event, myAccessibilityService);
         } else if (this.completeProcessor.canParse(event, myAccessibilityService)) {
-            // 打卡完成页
             this.completeProcessor.processPage(event, myAccessibilityService);
         } else if (this.siginInProcessor.canParse(event, myAccessibilityService)) {
-            // 打卡页
             this.siginInProcessor.processPage(event, myAccessibilityService);
         }
     }
 
-    @Override public boolean canHandler(String packageName2) {
+    @Override
+    public boolean canHandler(String packageName2) {
         return packageName.equals(packageName2);
     }
 }
